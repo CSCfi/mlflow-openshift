@@ -19,7 +19,7 @@ metadata:
     description: Deploys MLflow Lifecycle management service.
       The configuration for your pods can be changed according to the Openshift Quota(Limit Range).
       To get more quota, you should contact Openshift admins.
-    iconClass: icon-hadoop
+    iconClass: icon-other-unknown
     openshift.io/display-name: MLflow
     openshift.io/documentation-url: https://mlflow.org
     openshift.io/support-url: https://www.csc.fi/contact-info
