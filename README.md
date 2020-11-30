@@ -1,7 +1,7 @@
 # MLflow tracking server deployment for OpenShift container cloud
 
 This template implements MLflow Tracking server and MLflow models serving to OpenShift.
-By default settings MLflow Tracking server is deployed and started with access restrictions to use from CSC networks only. To change this modify Whitelist variable
+By default settings MLflow Tracking server is deployed and started. To restrict access modify Whitelist variable
 in OpenShift template or `routeWhitelist` in Helm chart.
 Starting up Models serving pod needs access to model stored in Rahti or externally to Allas object storage.
 
@@ -18,7 +18,7 @@ Since artifacts can be quite large files, it might be necessary to change `DEFAU
     to S3 address but you have to set up credentials before using S3 storage.
 
 Template asks for Allas credentials if you would like to use S3 connection to Allas as backend to store artifacts. You can left those credentials and 
-`DEFAULT_ARTIFACT_ROOT` variable empty if you would not like to setup S3. 
+`DEFAULT_ARTIFACT_ROOT` variable empty if you would not like to use Allas. 
 
 Instructions how to use different storage options can be found from [user guid](./user_guide.md) 
 
@@ -62,8 +62,7 @@ export MLFLOW_TRACKING_USERNAME=username
 export MLFLOW_TRACKING_PASSWORD=password
 ```
 
-This deployment adds user defined S3 credentials from values.yaml to MLflow server. If you use deployed MLflow 
-from other location than inside the pod, you have to add also S3 credentials to that environment.
+If you set up Allas as Artifact store, you have to set up following variables also into your development environment.
 
 ```bash
 export MLFLOW_S3_ENDPOINT_URL=https://a3s.fi
@@ -73,7 +72,7 @@ export MLFLOW_TRACKING_PASSWORD=<your_password>
 
 ---
 OpenShift template creates PVC storage automatically but deployment with Helm expects existing pvc.
-If pvc not exist and you are using Helm create it by applying following definition:
+If pvc not exist and you are using Helm, create it by applying following definition:
 
 ```
 apiVersion: "v1"
