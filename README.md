@@ -1,9 +1,10 @@
 # MLflow tracking server deployment for OpenShift container cloud
 
 This template implements MLflow Tracking server and MLflow models serving to OpenShift.
-By default settings MLflow Tracking server is deployed and started. To restrict access modify Whitelist variable
-in OpenShift template or `routeWhitelist` in Helm chart.
-Starting up Models serving pod needs access to model stored in Rahti or externally to Allas object storage.
+By default settings MLflow Tracking server is deployed and started with no access restrictions. To restrict access modify Whitelist variable
+in OpenShift template or `routeWhitelist` in Helm chart. MLflow Models service is deployed but not started. You can start Models after setting up
+`MODELS_URI` in `models-cfg` config map by increasing pod count to 1. 
+Starting up Models serving pod needs access to model stored in Rahti PVC storage or externally to Allas object storage.
 
 Different backend options:
 - Default backend for metrics and artifacts is PVC-storage in Rahti project. That is easiest way to use this template.

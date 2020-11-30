@@ -1,0 +1,27 @@
+{{- if eq .Values.ingressType "Route" }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: mlflow-models-route
+  labels:
+    app: mlflow-models
+  {{- if .Values.routeWhitelist }}
+  annotations:
+    haproxy.router.openshift.io/ip_whitelist: {{ .Values.routeWhitelist }}
+  {{- end }}
+spec:
+  {{- if .Values.ingressHostModels }}
+  host: {{ .Values.ingressHostModels }}
+  {{- end }}
+  to:
+    kind: Service
+    name: mlflow-models-service
+    weight: 100
+  port:
+    targetPort: models-service-port
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: edge
+status:
+  ingress: []
+{{- end}}

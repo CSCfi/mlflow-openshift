@@ -1,0 +1,128 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    description: MLflow Tracking Server API
+  name: mlflow-ui
+spec:
+  replicas: {{ .Values.apiReplicas }}
+  selector:
+    matchLabels:
+      name: mlflow-ui
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        name: mlflow-ui
+        app: mlflow
+      name: mlflow
+    spec:
+      initContainers:
+        - image: docker-registry.rahti.csc.fi/da-images/alpine-htpasswd:latest
+          command: ["/bin/sh","-c","source /tmp/secret-env/secret.env && htpasswd -bc /tmp/secret-file/passwd {{ .Values.username }} {{ .Values.password }}"]
+          name: htpasswd-generator
+          resources:
+            requests:
+              cpu: 200m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 512Mi
+          volumeMounts:
+            - name: mlflow-htpasswd-vol
+              mountPath: "/tmp/secret-file"
+            - name: mlflow-secret-vol
+              mountPath: "/tmp/secret-env"
+      containers:
+        - name: proxy-rewriter
+          image: docker-registry.rahti.csc.fi/spark-images/nginx:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 200m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 512Mi
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: mlflow-nginx-config-vol
+              mountPath: /opt/bitnami/nginx/conf/server_blocks
+            - name: mlflow-htpasswd-vol
+              mountPath: /etc/nginx/secrets
+        - name: mlflow
+          image: {{ .Values.apiImage }}
+          imagePullPolicy: Always
+          command: ["sh", "./startup/startup.sh"]
+          resources:
+            requests:
+              cpu: 200m
+              memory: 200Mi
+            limits:
+              cpu: 1600m
+              memory: 2Gi
+          ports:
+            - containerPort: 5000
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 30
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 3
+            timeoutSeconds: 3
+          volumeMounts:
+            - name: {{ .Values.storageName }}-vol
+              mountPath: /mnt/{{ .Values.storageName }}-pvc
+            - name: mlflow-ui-startup-vol
+              mountPath: "/startup"
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: mlflow-s3-credentials
+                  key: AWS_ACCESS_KEY_ID
+                  optional: true
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: mlflow-s3-credentials
+                  key: AWS_SECRET_ACCESS_KEY
+                  optional: true
+            - name: MLFLOW_S3_ENDPOINT_URL
+              valueFrom:
+                secretKeyRef:
+                  name: mlflow-s3-credentials
+                  key: S3_ENDPOINT_URL
+                  optional: true
+          envFrom:
+            - configMapRef:
+                name: mlflow-cfg
+                optional: true
+      volumes:
+        - name: mlflow-nginx-config-vol
+          configMap:
+            name: nginx-config-mlflow
+            items:
+              - key: default.conf
+                path: default.conf
+        - name: mlflow-ui-startup-vol
+          configMap:
+            name: mlflow-ui-startup-cfg
+            items:
+              - key: startup.sh
+                path: startup.sh
+        - name: mlflow-secret-vol
+          secret:
+            secretName: mlflow-secret
+        - name: mlflow-htpasswd-vol
+          emptyDir: {}
+        - name: {{ .Values.storageName }}-vol
+          persistentVolumeClaim:
+            claimName: {{ .Values.storageName }}-pvc

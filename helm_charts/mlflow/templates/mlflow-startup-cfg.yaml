@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mlflow-ui-startup-cfg
+data:
+  startup.sh: |
+    #!/bin/sh
+    if [ "$DEFAULT_ARTIFACT_ROOT" ];
+    then
+        # start MLflow with user defined default artifact store
+        mlflow server --backend-store-uri=$LOCAL_STORAGE_PATH --default-artifact-root=$DEFAULT_ARTIFACT_ROOT --host=0.0.0.0
+    else
+        # start MLflow defaulting artifact store to same as backend store
+        mlflow server --backend-store-uri=$LOCAL_STORAGE_PATH --default-artifact-root=$LOCAL_STORAGE_PATH --host=0.0.0.0
+    fi

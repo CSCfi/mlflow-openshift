@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mlflow-cfg
+data:
+  LOCAL_STORAGE_PATH: /mnt/{{ .Values.storageName }}-pvc/mlruns
+  DEFAULT_ARTIFACT_ROOT: {{ .Values.defaultArtifactRoot }}

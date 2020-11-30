@@ -1,0 +1,43 @@
+# Default values
+
+# images
+apiImage: docker-registry.rahti.csc.fi/mlflow-images/mlflow:latest
+
+# Ingress type can be 'Ingress' for K8s ingresses or 'Route' for OpenShift Routes
+ingressType: Ingress
+
+# Ingress host
+ingressHost: localhost
+
+# Ingress host for model serving
+#ingressHostModels:
+
+# Username for web authentication
+username:
+
+# Password for web authentication
+password:
+
+# Shared PVC storage name WITHOUT -pvc suffix
+#storageName:
+
+# Default artifact root path (s3://<your_bucket_name>/ to use Allas) (optional)
+#defaultArtifactRoot:
+
+# Default local storage path
+#localStoragePath:
+
+# AWS Access Key ID (optional)
+#awsAccessKeyId:
+
+# AWS Secret Access Key (optional)
+#awsSecretAccessKey:
+
+# S3 Endpoint URL
+#s3EndpointUrl:
+
+# MLflow Models URI (optional)
+#modelsUri:
+
+# Whitelist for access to route (optional)
+#routeWhitelist:

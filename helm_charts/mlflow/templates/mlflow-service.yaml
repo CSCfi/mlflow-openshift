@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    description: Exposes and load balances the Tracking Server pod
+  name: mlflow-ui-service
+spec:
+  ports:
+    - name: mlflow-ui-service
+      port: 80
+      targetPort: 8080
+  selector:
+    name: mlflow-ui
