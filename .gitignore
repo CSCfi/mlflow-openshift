@@ -1,0 +1,3 @@
+.idea/ 
+helm_charts/mlflow/local_values/
+.DS_Store

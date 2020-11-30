@@ -1,0 +1,471 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+labels:
+  app: mlflow
+  template: mlflow
+message: |-
+  The following components have been scheduled for creation in your project:
+  - MLflow Tracking server
+  - MLflow Models service
+
+  Go to project overview page and once the creation of all the components are finished, use the following links -
+  To access UI: ${APP_NAME}.${APPLICATION_DOMAIN_SUFFIX}
+  URL for model serving: ${APP_NAME}-models.${APPLICATION_DOMAIN_SUFFIX}
+
+  Installation instructions and user guide can be found from https://github.com/CSCfi/mlflow-openshift
+
+metadata:
+  annotations:
+    description: Deploys MLflow Lifecycle management service.
+      The configuration for your pods can be changed according to the Openshift Quota(Limit Range).
+      To get more quota, you should contact Openshift admins.
+    iconClass: icon-hadoop
+    openshift.io/display-name: MLflow
+    openshift.io/documentation-url: https://mlflow.org
+    openshift.io/support-url: https://www.csc.fi/contact-info
+    openshift.io/long-description: MLflow is tool for Machine Learning lifecycle management. https://mlflow.org/
+      f
+    openshift.io/provider-display-name: CSC
+    tags: mlflow
+    template.openshift.io/bindable: "false"
+  name: mlflow
+
+objects:
+  - apiVersion: "v1"
+    kind: "PersistentVolumeClaim"
+    metadata:
+      name: ${APP_NAME}-pvc
+    spec:
+      accessModes:
+        - "ReadWriteMany"
+      resources:
+        requests:
+          storage: ${STORAGE_SIZE}
+
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: mlflow-ui-secret
+    type: Opaque
+    stringData:
+      secret.env: |-
+        USER=${USERNAME}
+        PASS=${PASSWORD}
+
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: mlflow-s3-credentials
+    type: Opaque
+    stringData:
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: mlflow-cfg
+    data:
+      LOCAL_STORAGE_PATH: /mnt/${APP_NAME}-pvc/mlruns
+      DEFAULT_ARTIFACT_ROOT: ${DEFAULT_ARTIFACT_ROOT}
+
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: mlflow-ui-startup-cfg
+    data:
+      startup.sh: |
+        #!/bin/sh
+        if [ "$DEFAULT_ARTIFACT_ROOT" ];
+        then
+            # start MLflow with user defined default artifact store
+            mlflow server --backend-store-uri=$LOCAL_STORAGE_PATH --default-artifact-root=$DEFAULT_ARTIFACT_ROOT --host=0.0.0.0
+        else
+            # start MLflow defaulting artifact store to same as backend store
+            mlflow server --backend-store-uri=$LOCAL_STORAGE_PATH --default-artifact-root=$LOCAL_STORAGE_PATH --host=0.0.0.0
+        fi
+
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: nginx-config-mlflow
+    data:
+      default.conf: |
+        upstream node {
+          server localhost:5000;
+        }
+        server {
+            server_name             _;
+            listen                  8080;
+            location / {
+                proxy_set_header X-Real-IP \$remote_addr;
+                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                proxy_set_header Host ${APP_NAME}.${APPLICATION_DOMAIN_SUFFIX};
+                proxy_pass http://node;
+                proxy_redirect off;
+                port_in_redirect off;
+                auth_basic "MLflow UI Login";
+                auth_basic_user_file /etc/nginx/secrets/passwd;
+            }
+        }
+
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: models-cfg
+    data:
+      MODELS_URI: ${MODELS_URI}
+
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: mlflow-models-startup-cfg
+    data:
+      startup.sh: |
+        #!/bin/sh
+        if [ "$MODELS_URI" ];
+        then
+            mlflow models serve --model-uri=$MODELS_URI --port=5001 --host=0.0.0.0 --no-conda
+        else
+            echo "Model URI not specified to config map. Cannot startup serving."
+        fi
+
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      annotations:
+        description: Exposes and load balances the API pods
+      name: mlflow-models-service
+      labels:
+        app: mlflow-models
+    spec:
+      ports:
+        - name: models-service-port
+          port: 80
+          targetPort: 5001
+      selector:
+        name: mlflow-models
+
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      annotations:
+        description: Exposes and load balances the Tracking Server pod
+      name: mlflow-ui-service
+    spec:
+      ports:
+        - name: mlflow-ui-service
+          port: 80
+          targetPort: 8080
+      selector:
+        name: mlflow-ui
+
+  - apiVersion: route.openshift.io/v1
+    kind: Route
+    metadata:
+      name: mlflow-models-route
+      annotations:
+        haproxy.router.openshift.io/ip_whitelist: ${ROUTEWHITELIST}
+    spec:
+      host: ${APP_NAME}-models.${APPLICATION_DOMAIN_SUFFIX}
+      path: /
+      to:
+        kind: Service
+        name: mlflow-models-service
+        weight: 100
+      port:
+        targetPort: models-service-port
+      tls:
+        insecureEdgeTerminationPolicy: Redirect
+        termination: edge
+
+  - apiVersion: route.openshift.io/v1
+    kind: Route
+    metadata:
+      name: mlflow-ui-route
+      annotations:
+        haproxy.router.openshift.io/ip_whitelist: ${ROUTEWHITELIST}
+    spec:
+      host: ${APP_NAME}.${APPLICATION_DOMAIN_SUFFIX}
+      path: /
+      to:
+        kind: Service
+        name: mlflow-ui-service
+        weight: 100
+      port:
+        targetPort: mlflow-ui-service
+      tls:
+        insecureEdgeTerminationPolicy: Redirect
+        termination: edge
+
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      annotations:
+        description: MLflow Models
+      name: mlflow-models
+    spec:
+      replicas: 0
+      selector:
+        matchLabels:
+          name: mlflow-models
+      strategy:
+        type: RollingUpdate
+      template:
+        metadata:
+          labels:
+            name: mlflow-models
+            app: mlflow
+          name: mlflow
+        spec:
+          containers:
+            - name: mlflow-models
+              image: ${MLFLOW_IMAGE}
+              imagePullPolicy: Always
+              command: ["sh", "./startup/startup.sh"]
+              resources:
+                requests:
+                  cpu: 200m
+                  memory: 200Mi
+                limits:
+                  cpu: 1600m
+                  memory: 1Gi
+              ports:
+                - containerPort: 5001
+              volumeMounts:
+                - name: ${APP_NAME}-vol
+                  mountPath: /mnt/${APP_NAME}-pvc
+                - name: mlflow-models-startup-vol
+                  mountPath: "/startup"
+              env:
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: mlflow-s3-credentials
+                      key: AWS_ACCESS_KEY_ID
+                      optional: true
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: mlflow-s3-credentials
+                      key: AWS_SECRET_ACCESS_KEY
+                      optional: true
+                - name: MLFLOW_S3_ENDPOINT_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: mlflow-s3-credentials
+                      key: S3_ENDPOINT_URL
+                      optional: true
+              envFrom:
+                - configMapRef:
+                    name: models-cfg
+                    optional: true
+          volumes:
+            - name: mlflow-models-startup-vol
+              configMap:
+                name: mlflow-models-startup-cfg
+                items:
+                  - key: startup.sh
+                    path: startup.sh
+            - name: ${APP_NAME}-vol
+              persistentVolumeClaim:
+                claimName: ${APP_NAME}-pvc
+
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      annotations:
+        description: MLflow Tracking Server API
+      name: mlflow-ui
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          name: mlflow-ui
+      strategy:
+        type: RollingUpdate
+      template:
+        metadata:
+          labels:
+            name: mlflow-ui
+            app: mlflow
+          name: mlflow
+        spec:
+          initContainers:
+            - image: docker-registry.rahti.csc.fi/da-images/alpine-htpasswd:latest
+              command: ["/bin/sh","-c","source /tmp/secret-env/secret.env && htpasswd -bc /tmp/secret-file/passwd $USER $PASS"]
+              name: htpasswd-generator
+              resources:
+                requests:
+                  cpu: 200m
+                  memory: 128Mi
+                limits:
+                  cpu: 300m
+                  memory: 512Mi
+              volumeMounts:
+                - name: mlflow-htpasswd-vol
+                  mountPath: "/tmp/secret-file"
+                - name: mlflow-secret-vol
+                  mountPath: "/tmp/secret-env"
+          containers:
+            - name: proxy-rewriter
+              image: docker-registry.rahti.csc.fi/spark-images/nginx:latest
+              imagePullPolicy: Always
+              resources:
+                requests:
+                  cpu: 200m
+                  memory: 128Mi
+                limits:
+                  cpu: 300m
+                  memory: 512Mi
+              ports:
+                - containerPort: 8080
+              volumeMounts:
+                - name: mlflow-nginx-config-vol
+                  mountPath: /opt/bitnami/nginx/conf/server_blocks
+                - name: mlflow-htpasswd-vol
+                  mountPath: /etc/nginx/secrets
+            - name: mlflow
+              image: ${MLFLOW_IMAGE}
+              imagePullPolicy: Always
+              command: ["sh", "./startup/startup.sh"]
+              resources:
+                requests:
+                  cpu: 200m
+                  memory: 200Mi
+                limits:
+                  cpu: 1600m
+                  memory: 2Gi
+              ports:
+                - containerPort: 5000
+              livenessProbe:
+                httpGet:
+                  path: /
+                  port: 5000
+                initialDelaySeconds: 30
+                timeoutSeconds: 3
+              readinessProbe:
+                httpGet:
+                  path: /
+                  port: 5000
+                initialDelaySeconds: 3
+                timeoutSeconds: 3
+              volumeMounts:
+                - name: ${APP_NAME}-vol
+                  mountPath: /mnt/${APP_NAME}-pvc
+                - name: mlflow-ui-startup-vol
+                  mountPath: "/startup"
+              env:
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: mlflow-s3-credentials
+                      key: AWS_ACCESS_KEY_ID
+                      optional: true
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: mlflow-s3-credentials
+                      key: AWS_SECRET_ACCESS_KEY
+                      optional: true
+                - name: MLFLOW_S3_ENDPOINT_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: mlflow-s3-credentials
+                      key: S3_ENDPOINT_URL
+                      optional: true
+              envFrom:
+                - configMapRef:
+                    name: mlflow-cfg
+                    key: LOCAL_STORAGE_PATH
+          volumes:
+            - name: mlflow-nginx-config-vol
+              configMap:
+                name: nginx-config-mlflow
+                items:
+                  - key: default.conf
+                    path: default.conf
+            - name: mlflow-ui-startup-vol
+              configMap:
+                name: mlflow-ui-startup-cfg
+                items:
+                  - key: startup.sh
+                    path: startup.sh
+            - name: mlflow-secret-vol
+              secret:
+                secretName: mlflow-ui-secret
+            - name: mlflow-htpasswd-vol
+              emptyDir: {}
+            - name: ${APP_NAME}-vol
+              persistentVolumeClaim:
+                claimName: ${APP_NAME}-pvc
+
+parameters:
+- description: Unique identifier for your MLflow-app. Recommended value - your username
+  displayName: App Name
+  name: APP_NAME
+  required: true
+
+- description: Create a new username for logging into Tracking server UI
+  displayName: Username
+  name: USERNAME
+  required: true
+
+- description: Create a new password for logging into Tracking server UI
+  displayName: Password
+  name: PASSWORD
+  required: true
+
+- description: Persistent Storage Size
+  displayName: Storage Size
+  name: STORAGE_SIZE
+  required: true
+  value: '10Gi'
+
+- description: Leave empty to use default PVC storage. Fill your s3://your_bucket_name/ -path if you want to use Allas (optional)
+  displayName: Default artifact root path
+  name: DEFAULT_ARTIFACT_ROOT
+  required: false
+  value:
+
+- description: Fill AWS access key if you will use Allas for artifact store (optional)
+  displayName: AWS access key
+  name: AWS_ACCESS_KEY_ID
+  required: false
+  value:
+
+- description: Fill AWS Secret Access key if you will use Allas for artifact store (optional)
+  displayName: AWS Secret Access key
+  name: AWS_SECRET_ACCESS_KEY
+  required: false
+  value:
+
+- description: S3 compatible object storage url (default address is for Allas - change only if you use some other service)
+  displayName: Object storage url
+  name: S3_ENDPOINT_URL
+  required: false
+  value: https://a3s.fi
+
+- description: URL for model to host as a service (leave blank if you don't have it yet)
+  displayName: Model serving URL
+  name: MODELS_URI
+  required: false
+  value:
+
+- description: Docker Image for the MLflow
+  displayName: MLflow image
+  name: MLFLOW_IMAGE
+  required: true
+  value: docker-registry.rahti.csc.fi/mlflow-images/mlflow:latest
+
+- description: The exposed hostname suffix that will be used to create routes for Tracking Server UI and Models API
+  displayName: Application Hostname Suffix
+  name: APPLICATION_DOMAIN_SUFFIX
+  value: rahtiapp.fi
+
+- description: By default, application is accessible from anywhere. To restrict access, add your workstation IP or network range to whitelist.
+  displayName: Route whitelist
+  name: ROUTEWHITELIST
+  required: false
+  value:
