@@ -1,4 +1,4 @@
-FROM python:3.7.0
+FROM docker-registry.default.svc:5000/da-images/python:3.7.0
 
 LABEL maintainer="Juha Hulkkonen <juha.hulkkonen@csc.fi>"
 
@@ -10,7 +10,7 @@ RUN pip install pyspark
 RUN pip install mysqlclient
 
 ## Install MLflow
-RUN pip install mlflow==1.12.0
+RUN pip install mlflow==1.13.1
 
 ## Start it up
 CMD mlflow

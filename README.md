@@ -1,13 +1,13 @@
 # MLflow deployment for OpenShift container cloud
 
-This repository contains Helm chart and OpenShift Template of [MLflow Tracking server](https://mlflow.org/docs/latest/tracking.html) and [MLflow models](https://mlflow.org/docs/latest/models.html).  
+This repository contains OpenShift Template of [MLflow Tracking server](https://mlflow.org/docs/latest/tracking.html) and [MLflow models](https://mlflow.org/docs/latest/models.html).  
 **MLflow Tracking Server** records data and metrics to track and compare performance of machine learning training experiments.  
 **MLflow Models** is used to deploy machine learning models for inference.  
 
 With default settings services are accessible from everywhere. To restrict access modify Whitelist variable
-in OpenShift template or `routeWhitelist` in Helm chart.  
+in OpenShift template.  
 
-MLflow Models service is deployed but not started. Starting up Models serving pod needs access to model stored in Rahti PVC storage or externally to Allas object storage.
+MLflow Models service is deployed but not started. Starting up Models serving pod needs access to model stored in Rahti PVC storage.
 You can start Models after setting up
 `MODELS_URI` in `models-cfg` config map by increasing pod count to 1. 
 
@@ -16,55 +16,32 @@ Different backend options:
 - Other option to store metrics is to use database. MySQL template can be found from Rahti catalog to use for that purpose. (instructions TBA) 
 
 Since artifacts can be quite large files, it might be necessary to change `DEFAULT_ARTIFACT_ROOT` to point some other storage system.
-- CSC Allas or some other S3 compatible object storage can be set up for artifact store.
-
-
-    You can change artifact root explicitly by each experiment so you don't have to necessarily change DEFAULT_ARTIFACT_ROOT 
-    to S3 address but you have to set up credentials before using S3 storage.
-
-Template asks for Allas credentials if you would like to use S3 connection to Allas as backend to store artifacts. You can left those credentials and 
-`DEFAULT_ARTIFACT_ROOT` variable empty if you would not like to use Allas. 
+- CSC Allas or some other S3 compatible object storage can be set up for artifact store. (instructions TBA)
 
 ## Things to note
 
-Models pod is scaled to 0 initially. It cannot be started unless working model_uri (and S3 credentials if S3 as source) 
-is passed to `models-cfg` config map.
+Models pod is scaled to 0 initially. It cannot be started unless working model_uri
+is passed to `models-cfg` config map. Model should be first developed externally and 
+stored into MLflow Model Registry from Tracking server ui to be used for Models Serving
 
-Please note that environment variables should be used in training machine to access remote tracking server!
+Please note that MLflow itself is not programming environment. You can develop your machine learning code in your own environment 
+in your own machine or in CSC cloud or supercomputer services.
+You should set up environment variables in your programming environment to access this MLflow Tracking server!
 Tracking server uri is the address of your deployed tracking server (for example: https://<APP_NAME>.rahtiapp.fi)
 ```bash
-export MLFLOW_TRACKING_URI=address
-export MLFLOW_TRACKING_USERNAME=username
-export MLFLOW_TRACKING_PASSWORD=password
-```
-
-If you set up Allas as Artifact store, you have to set up following variables also into your development environment.
-
-```bash
-export MLFLOW_S3_ENDPOINT_URL=https://a3s.fi
-export MLFLOW_TRACKING_USERNAME=<your_username>
-export MLFLOW_TRACKING_PASSWORD=<your_password>
+export MLFLOW_TRACKING_URI=your_address
+export MLFLOW_TRACKING_USERNAME=your_username
+export MLFLOW_TRACKING_PASSWORD=your_password
 ```
 
 ---
-OpenShift template creates PVC storage automatically but deployment with Helm expects existing pvc.
-If pvc not exist and you are using Helm, create it by applying following definition:
-
-```
-apiVersion: "v1"
-kind: "PersistentVolumeClaim"
-metadata:
-    name: "storage-pvc"
-spec:
-    accessModes:
-      - "ReadWriteMany"
-    resources:
-      requests:
-        storage: "10Gi"
-``` 
-And add that storage name ("storage-pvc" here) to `storageName` variable in values.yaml
 
 ## Version history
+**Version 0.5.0 - 18.1.2021
+Let's get back to basics**
+- Removed Helm chart from master
+- Removed Allas configuration and instructions from master to make it simpler to setup 
+- Created new 'dev' branch for advanced features
 
 **Version 0.4.0 - 27.11.2020
 Towards public template**

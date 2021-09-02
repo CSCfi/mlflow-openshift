@@ -53,22 +53,12 @@ objects:
         PASS=${PASSWORD}
 
   - apiVersion: v1
-    kind: Secret
-    metadata:
-      name: mlflow-s3-credentials
-    type: Opaque
-    stringData:
-      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-
-  - apiVersion: v1
     kind: ConfigMap
     metadata:
       name: mlflow-cfg
     data:
       LOCAL_STORAGE_PATH: /mnt/${APP_NAME}-pvc/mlruns
-      DEFAULT_ARTIFACT_ROOT: ${DEFAULT_ARTIFACT_ROOT}
+      DEFAULT_ARTIFACT_ROOT:
 
   - apiVersion: v1
     kind: ConfigMap
@@ -115,7 +105,7 @@ objects:
     metadata:
       name: models-cfg
     data:
-      MODELS_URI: ${MODELS_URI}
+      MODELS_URI:
 
   - apiVersion: v1
     kind: ConfigMap
@@ -238,25 +228,6 @@ objects:
                   mountPath: /mnt/${APP_NAME}-pvc
                 - name: mlflow-models-startup-vol
                   mountPath: "/startup"
-              env:
-                - name: AWS_ACCESS_KEY_ID
-                  valueFrom:
-                    secretKeyRef:
-                      name: mlflow-s3-credentials
-                      key: AWS_ACCESS_KEY_ID
-                      optional: true
-                - name: AWS_SECRET_ACCESS_KEY
-                  valueFrom:
-                    secretKeyRef:
-                      name: mlflow-s3-credentials
-                      key: AWS_SECRET_ACCESS_KEY
-                      optional: true
-                - name: MLFLOW_S3_ENDPOINT_URL
-                  valueFrom:
-                    secretKeyRef:
-                      name: mlflow-s3-credentials
-                      key: S3_ENDPOINT_URL
-                      optional: true
               envFrom:
                 - configMapRef:
                     name: models-cfg
@@ -356,25 +327,6 @@ objects:
                   mountPath: /mnt/${APP_NAME}-pvc
                 - name: mlflow-ui-startup-vol
                   mountPath: "/startup"
-              env:
-                - name: AWS_ACCESS_KEY_ID
-                  valueFrom:
-                    secretKeyRef:
-                      name: mlflow-s3-credentials
-                      key: AWS_ACCESS_KEY_ID
-                      optional: true
-                - name: AWS_SECRET_ACCESS_KEY
-                  valueFrom:
-                    secretKeyRef:
-                      name: mlflow-s3-credentials
-                      key: AWS_SECRET_ACCESS_KEY
-                      optional: true
-                - name: MLFLOW_S3_ENDPOINT_URL
-                  valueFrom:
-                    secretKeyRef:
-                      name: mlflow-s3-credentials
-                      key: S3_ENDPOINT_URL
-                      optional: true
               envFrom:
                 - configMapRef:
                     name: mlflow-cfg
@@ -422,36 +374,6 @@ parameters:
   name: STORAGE_SIZE
   required: true
   value: '10Gi'
-
-- description: Leave empty to use default PVC storage. Fill your s3://your_bucket_name/ -path if you want to use Allas (optional)
-  displayName: Default artifact root path
-  name: DEFAULT_ARTIFACT_ROOT
-  required: false
-  value:
-
-- description: Fill AWS access key if you will use Allas for artifact store (optional)
-  displayName: AWS access key
-  name: AWS_ACCESS_KEY_ID
-  required: false
-  value:
-
-- description: Fill AWS Secret Access key if you will use Allas for artifact store (optional)
-  displayName: AWS Secret Access key
-  name: AWS_SECRET_ACCESS_KEY
-  required: false
-  value:
-
-- description: S3 compatible object storage url (default address is for Allas - change only if you use some other service)
-  displayName: Object storage url
-  name: S3_ENDPOINT_URL
-  required: false
-  value: https://a3s.fi
-
-- description: URL for model to host as a service (leave blank if you don't have it yet)
-  displayName: Model serving URL
-  name: MODELS_URI
-  required: false
-  value:
 
 - description: Docker Image for the MLflow
   displayName: MLflow image
