@@ -37,6 +37,11 @@ export MLFLOW_TRACKING_PASSWORD=your_password
 ---
 
 ## Version history
+**Version 0.5.1 - 20.9.2021
+Update a bit**
+- Updated MLflow from 1.13.1 -> 1.20.2
+- Python image source back to DockerHub
+
 **Version 0.5.0 - 18.1.2021
 Let's get back to basics**
 - Removed Helm chart from master
