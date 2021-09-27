@@ -7,6 +7,7 @@ message: |-
   The following components have been scheduled for creation in your project:
   - MLflow Tracking server
   - MLflow Models service
+  - PostgreSQL pod for backend database
 
   Go to project overview page and once the creation of all the components are finished, use the following links -
   To access UI: ${APP_NAME}.${APPLICATION_DOMAIN_SUFFIX}
@@ -42,6 +43,17 @@ objects:
         requests:
           storage: ${STORAGE_SIZE}
 
+  - apiVersion: "v1"
+    kind: "PersistentVolumeClaim"
+    metadata:
+      name: ${DB_PVC}
+    spec:
+      accessModes:
+        - "ReadWriteOnce"
+      resources:
+        requests:
+          storage: ${DB_PVC_SIZE}
+
   - apiVersion: v1
     kind: Secret
     metadata:
@@ -53,12 +65,27 @@ objects:
         PASS=${PASSWORD}
 
   - apiVersion: v1
+    stringData:
+      database-name: ${POSTGRESQL_DATABASE}
+      database-password: ${POSTGRESQL_PASSWORD}
+      database-user: ${POSTGRESQL_USER}
+      connection-string: postgresql+psycopg2://${POSTGRESQL_USER}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}:5432/${POSTGRESQL_DATABASE}
+      result-backend: db+postgresql://${POSTGRESQL_USER}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}:5432/${POSTGRESQL_DATABASE}
+    kind: Secret
+    metadata:
+      labels:
+        app: ${APP_NAME}
+        template: postgresql-ephemeral-template
+      name: postgresql
+    type: Opaque
+
+  - apiVersion: v1
     kind: ConfigMap
     metadata:
       name: mlflow-cfg
     data:
       LOCAL_STORAGE_PATH: /mnt/${APP_NAME}-pvc/mlruns
-      DEFAULT_ARTIFACT_ROOT:
+      DEFAULT_ARTIFACT_ROOT: ./mlruns
 
   - apiVersion: v1
     kind: ConfigMap
@@ -72,8 +99,8 @@ objects:
             # start MLflow with user defined default artifact store
             mlflow server --backend-store-uri=$LOCAL_STORAGE_PATH --default-artifact-root=$DEFAULT_ARTIFACT_ROOT --host=0.0.0.0
         else
-            # start MLflow defaulting artifact store to same as backend store
-            mlflow server --backend-store-uri=$LOCAL_STORAGE_PATH --default-artifact-root=$LOCAL_STORAGE_PATH --host=0.0.0.0
+            # start MLflow without artifact store path set
+            mlflow server --backend-store-uri=$LOCAL_STORAGE_PATH --host=0.0.0.0
         fi
 
   - apiVersion: v1
@@ -120,6 +147,26 @@ objects:
         else
             echo "Model URI not specified to config map. Cannot startup serving."
         fi
+
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        app: ${APP_NAME}
+        template: postgresql-ephemeral-template
+      name: ${POSTGRESQL_HOST}
+    spec:
+      ports:
+        - name: ${POSTGRESQL_HOST}
+          port: 5432
+          protocol: TCP
+          targetPort: 5432
+      selector:
+        name: ${POSTGRESQL_HOST}
+      sessionAffinity: None
+      type: ClusterIP
+    status:
+      loadBalancer: { }
 
   - apiVersion: v1
     kind: Service
@@ -242,6 +289,97 @@ objects:
             - name: ${APP_NAME}-vol
               persistentVolumeClaim:
                 claimName: ${APP_NAME}-pvc
+  - apiVersion: v1
+    kind: DeploymentConfig
+    metadata:
+      labels:
+        app: ${APP_NAME}
+        template: postgresql-ephemeral-template
+      name: ${POSTGRESQL_HOST}
+    spec:
+      replicas: 0
+      selector:
+        name: ${POSTGRESQL_HOST}
+      strategy:
+        type: Recreate
+      template:
+        metadata:
+          labels:
+            name: ${POSTGRESQL_HOST}
+        spec:
+          containers:
+          - env:
+            - name: POSTGRESQL_USER
+              valueFrom:
+                secretKeyRef:
+                  key: database-user
+                  name: postgresql
+            - name: POSTGRESQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: database-password
+                  name: postgresql
+            - name: POSTGRESQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  key: database-name
+                  name: postgresql
+            image: centos/postgresql-12-centos7:1
+            imagePullPolicy: IfNotPresent
+            livenessProbe:
+              failureThreshold: 3
+              initialDelaySeconds: 30
+              periodSeconds: 10
+              successThreshold: 1
+              tcpSocket:
+                port: 5432
+              timeoutSeconds: 1
+            name: ${POSTGRESQL_HOST}
+            ports:
+            - containerPort: 5432
+              protocol: TCP
+            readinessProbe:
+              exec:
+                command:
+                - /bin/sh
+                - -i
+                - -c
+                - psql -h 127.0.0.1 -U $POSTGRESQL_USER -q -d $POSTGRESQL_DATABASE -c
+                  'SELECT 1'
+              failureThreshold: 3
+              initialDelaySeconds: 20
+              periodSeconds: 10
+              successThreshold: 1
+              timeoutSeconds: 1
+            resources:
+              limits:
+                memory: 1Gi
+            securityContext:
+              capabilities: {}
+              privileged: false
+            volumeMounts:
+            - mountPath: /var/lib/pgsql/data
+              name: postgresql-data
+          dnsPolicy: ClusterFirst
+          restartPolicy: Always
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+          volumes:
+          - name: postgresql-data
+            persistentVolumeClaim:
+              claimName: ${DB_PVC}
+      triggers:
+      - imageChangeParams:
+          automatic: true
+          containerNames:
+          - ${POSTGRESQL_HOST}
+          from:
+            kind: ImageStreamTag
+            name: postgresql:12
+            namespace: openshift
+        type: ImageChange
+      - type: ConfigChange
 
   - apiVersion: apps/v1
     kind: Deployment
@@ -373,13 +511,50 @@ parameters:
   displayName: Storage Size
   name: STORAGE_SIZE
   required: true
-  value: '10Gi'
+  value: '1Gi'
 
 - description: Docker Image for the MLflow
   displayName: MLflow image
   name: MLFLOW_IMAGE
   required: true
   value: docker-registry.rahti.csc.fi/mlflow-images/mlflow:latest
+
+- description: PostgreSQL For Artifact Store host
+  displayName: PostgreSQL hostname
+  name: POSTGRESQL_HOST
+  value: postgresql
+  required: true
+
+- description: Username for PostgreSQL user that will be used for accessing the database
+  displayName: PostgreSQL connection username
+  from: 'user[A-Z0-9]{5}'
+  generate: expression
+  name: POSTGRESQL_USER
+  required: true
+
+- description: Password for the PostgreSQL connection user
+  displayName: PostgreSQL connection password
+  from: '[a-zA-Z0-9]{16}'
+  generate: expression
+  name: POSTGRESQL_PASSWORD
+  required: true
+
+- description: Attached PERSISTENT volume claim name for storing metadata in PostgreSQL database
+  displayName: PERSISTENT volume claim name (database)
+  name: DB_PVC
+  value: postgre-db-pvc
+
+- description: Size of the artifact storage volume storage
+  displayName: Metadata volume storage size
+  name: DB_PVC_SIZE
+  value: "10Gi"
+
+- description: Database name for PostgreSQL database
+  displayName: PostgreSQL connection database
+  from: 'airflow[A-Z0-9]{5}'
+  generate: expression
+  name: POSTGRESQL_DATABASE
+  required: true
 
 - description: The exposed hostname suffix that will be used to create routes for Tracking Server UI and Models API
   displayName: Application Hostname Suffix

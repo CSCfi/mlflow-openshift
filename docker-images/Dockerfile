@@ -8,6 +8,8 @@ RUN pip install boto3
 RUN pip install scikit-learn
 RUN pip install pyspark
 RUN pip install mysqlclient
+RUN pip install postgres
+RUN pip install --no-binary :all: psycopg2
 
 ## Install MLflow
 RUN pip install mlflow==1.20.2

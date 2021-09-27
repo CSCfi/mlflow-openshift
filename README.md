@@ -15,8 +15,9 @@ Different backend options:
 - Default backend for metrics and artifacts is PVC-storage in Rahti project. That is easiest way to use this template.
 - Other option to store metrics is to use database. MySQL template can be found from Rahti catalog to use for that purpose. (instructions TBA) 
 
-Since artifacts can be quite large files, it might be necessary to change `DEFAULT_ARTIFACT_ROOT` to point some other storage system.
-- CSC Allas or some other S3 compatible object storage can be set up for artifact store. (instructions TBA)
+Since artifacts can be quite large files, it might be necessary to change `DEFAULT_ARTIFACT_ROOT` to point some external storage system.
+- Default artifact store is set to `./mlruns` to avoid errors in autolog-functions. That causes artifacts to be stored to local `./mlruns` directory in machine executing training. These artifacts cannot be seen in tracking server.
+- CSC Allas or some other S3 compatible object storage should be set up for artifact store to make them available to Tracking server. (instructions TBA)
 
 ## Things to note
 
@@ -37,6 +38,16 @@ export MLFLOW_TRACKING_PASSWORD=your_password
 ---
 
 ## Version history
+**Version 0.6.0 - 24.9.2021
+Distribute metrics to PostgreSQL**
+- Added postgres and psycopg2 libraries to Dockerfile
+- Added PostgreSQL pod deployment to template - no startup
+- Added secrets, pvc and service for postgresql
+- Reduced mlflow-ui storage from 10gi to 1gi
+- Changed startup-script to default artifact store to ./mlruns
+- Default backend-store still pvc-filesystem
+- Default artifact store set to ./mlruns and note to instructions
+
 **Version 0.5.1 - 20.9.2021
 Update a bit**
 - Updated MLflow from 1.13.1 -> 1.20.2
