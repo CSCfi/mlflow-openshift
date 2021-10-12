@@ -8,10 +8,15 @@ message: |-
   - MLflow Tracking server
   - MLflow Models service
   - PostgreSQL pod for backend database
+  - MinIO S3 compatible private object storage for default artifact store
 
   Go to project overview page and once the creation of all the components are finished, use the following links -
-  To access UI: ${APP_NAME}.${APPLICATION_DOMAIN_SUFFIX}
-  URL for model serving: ${APP_NAME}-models.${APPLICATION_DOMAIN_SUFFIX}
+  To access UI: https://${APP_NAME}.${APPLICATION_DOMAIN_SUFFIX}
+  URL for model serving: https://${APP_NAME}-models.${APPLICATION_DOMAIN_SUFFIX}
+  Artifact store: https://${APP_NAME}-minio.${APPLICATION_DOMAIN_SUFFIX}
+
+  Artifact store key: ${AWS_ACCESS_KEY_ID}
+  Artifact store secret key: ${AWS_SECRET_ACCESS_KEY}
 
   Installation instructions and user guide can be found from https://github.com/CSCfi/mlflow-openshift
 
@@ -46,13 +51,25 @@ objects:
   - apiVersion: "v1"
     kind: "PersistentVolumeClaim"
     metadata:
-      name: ${DB_PVC}
+      name: postgre-db-pvc
     spec:
       accessModes:
         - "ReadWriteOnce"
       resources:
         requests:
           storage: ${DB_PVC_SIZE}
+
+  - apiVersion: "v1"
+    kind: "PersistentVolumeClaim"
+    metadata:
+      name: minio-pvc
+    spec:
+      storageClassName: glusterfs-storage
+      accessModes:
+        - "ReadWriteMany"
+      resources:
+        requests:
+          storage: ${MINIO_PVC_SIZE}
 
   - apiVersion: v1
     kind: Secret
@@ -65,12 +82,22 @@ objects:
         PASS=${PASSWORD}
 
   - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: mlflow-s3-credentials
+    type: Opaque
+    stringData:
+      S3_ENDPOINT_URL: https://${APP_NAME}-minio.${APPLICATION_DOMAIN_SUFFIX}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+
+  - apiVersion: v1
     stringData:
       database-name: ${POSTGRESQL_DATABASE}
       database-password: ${POSTGRESQL_PASSWORD}
       database-user: ${POSTGRESQL_USER}
-      connection-string: postgresql+psycopg2://${POSTGRESQL_USER}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}:5432/${POSTGRESQL_DATABASE}
-      result-backend: db+postgresql://${POSTGRESQL_USER}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}:5432/${POSTGRESQL_DATABASE}
+      connection-string: postgresql+psycopg2://${POSTGRESQL_USER}:${POSTGRESQL_PASSWORD}@postgresql:5432/${POSTGRESQL_DATABASE}
+      result-backend: db+postgresql://${POSTGRESQL_USER}:${POSTGRESQL_PASSWORD}@postgresql:5432/${POSTGRESQL_DATABASE}
     kind: Secret
     metadata:
       labels:
@@ -84,8 +111,8 @@ objects:
     metadata:
       name: mlflow-cfg
     data:
-      LOCAL_STORAGE_PATH: /mnt/${APP_NAME}-pvc/mlruns
-      DEFAULT_ARTIFACT_ROOT: ./mlruns
+      LOCAL_STORAGE_PATH: postgresql+psycopg2://${POSTGRESQL_USER}:${POSTGRESQL_PASSWORD}@postgresql:5432/${POSTGRESQL_DATABASE}
+      DEFAULT_ARTIFACT_ROOT: s3://default
 
   - apiVersion: v1
     kind: ConfigMap
@@ -151,22 +178,40 @@ objects:
   - apiVersion: v1
     kind: Service
     metadata:
+      annotations:
+        description: PostgreSQL service for backend store
+      name: postgresql
       labels:
-        app: ${APP_NAME}
-        template: postgresql-ephemeral-template
-      name: ${POSTGRESQL_HOST}
+        app: postgresql
     spec:
       ports:
-        - name: ${POSTGRESQL_HOST}
+        - name: postgresql-service
           port: 5432
           protocol: TCP
           targetPort: 5432
       selector:
-        name: ${POSTGRESQL_HOST}
+        name: postgresql
       sessionAffinity: None
       type: ClusterIP
     status:
       loadBalancer: { }
+
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      annotations:
+        description: Minio service for artifact store
+      name: minio-service
+      labels:
+        app: minio
+    spec:
+      ports:
+        - name: minio-service
+          port: 9000
+          protocol: TCP
+          targetPort: 9000
+      selector:
+        app: minio
 
   - apiVersion: v1
     kind: Service
@@ -178,7 +223,7 @@ objects:
         app: mlflow-models
     spec:
       ports:
-        - name: models-service-port
+        - name: mlflow-models-service
           port: 80
           targetPort: 5001
       selector:
@@ -212,7 +257,7 @@ objects:
         name: mlflow-models-service
         weight: 100
       port:
-        targetPort: models-service-port
+        targetPort: mlflow-models-service
       tls:
         insecureEdgeTerminationPolicy: Redirect
         termination: edge
@@ -235,6 +280,27 @@ objects:
       tls:
         insecureEdgeTerminationPolicy: Redirect
         termination: edge
+
+  - apiVersion: route.openshift.io/v1
+    kind: Route
+    metadata:
+      labels:
+        app: minio
+      name: minio-route
+      annotations:
+        haproxy.router.openshift.io/ip_whitelist: ${ROUTEWHITELIST}
+    spec:
+      host: ${APP_NAME}-minio.${APPLICATION_DOMAIN_SUFFIX}
+      path: /
+      to:
+        kind: Service
+        name: minio-service
+        weight: 100
+      port:
+        targetPort: minio-service
+      tls:
+        termination: edge
+        insecureEdgeTerminationPolicy: Redirect
 
   - apiVersion: apps/v1
     kind: Deployment
@@ -275,6 +341,25 @@ objects:
                   mountPath: /mnt/${APP_NAME}-pvc
                 - name: mlflow-models-startup-vol
                   mountPath: "/startup"
+              env:
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: mlflow-s3-credentials
+                      key: AWS_ACCESS_KEY_ID
+                      optional: true
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: mlflow-s3-credentials
+                      key: AWS_SECRET_ACCESS_KEY
+                      optional: true
+                - name: MLFLOW_S3_ENDPOINT_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: mlflow-s3-credentials
+                      key: S3_ENDPOINT_URL
+                      optional: true
               envFrom:
                 - configMapRef:
                     name: models-cfg
@@ -289,23 +374,24 @@ objects:
             - name: ${APP_NAME}-vol
               persistentVolumeClaim:
                 claimName: ${APP_NAME}-pvc
+
   - apiVersion: v1
     kind: DeploymentConfig
     metadata:
       labels:
         app: ${APP_NAME}
         template: postgresql-ephemeral-template
-      name: ${POSTGRESQL_HOST}
+      name: postgresql
     spec:
-      replicas: 0
+      replicas: 1
       selector:
-        name: ${POSTGRESQL_HOST}
+        name: postgresql
       strategy:
         type: Recreate
       template:
         metadata:
           labels:
-            name: ${POSTGRESQL_HOST}
+            name: postgresql
         spec:
           containers:
           - env:
@@ -334,7 +420,7 @@ objects:
               tcpSocket:
                 port: 5432
               timeoutSeconds: 1
-            name: ${POSTGRESQL_HOST}
+            name: postgresql
             ports:
             - containerPort: 5432
               protocol: TCP
@@ -368,18 +454,74 @@ objects:
           volumes:
           - name: postgresql-data
             persistentVolumeClaim:
-              claimName: ${DB_PVC}
+              claimName: postgre-db-pvc
       triggers:
       - imageChangeParams:
           automatic: true
           containerNames:
-          - ${POSTGRESQL_HOST}
+          - postgresql
           from:
             kind: ImageStreamTag
             name: postgresql:12
             namespace: openshift
         type: ImageChange
       - type: ConfigChange
+
+  - apiVersion: v1
+    kind: DeploymentConfig
+    metadata:
+      labels:
+        app: minio
+      name: minio
+    spec:
+      replicas: 1
+      template:
+        metadata:
+          labels:
+            app: minio
+        spec:
+          containers:
+          - image: minio/minio:RELEASE.2021-04-18T19-26-29Z
+            name: minio
+            ports:
+            - containerPort: 9000
+              protocol: TCP
+            resources:
+              limits:
+                cpu: 500m
+                memory: 512Mi
+              requests:
+                cpu: 200m
+                memory: 256Mi
+            readinessProbe:
+              httpGet:
+                path: /minio/health/ready
+                port: 9000
+                scheme: HTTP
+            livelinessProbe:
+              httpGet:
+                path: /health/live
+                port: 9000
+                scheme: HTTP
+            volumeMounts:
+            - mountPath: /data/files
+              name: minio-vol
+            command: ["/bin/sh","-c","mkdir -p /data/files/default && minio server /data/files"]
+            env:
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: mlflow-s3-credentials
+                  key: AWS_ACCESS_KEY_ID
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: mlflow-s3-credentials
+                  key: AWS_SECRET_ACCESS_KEY
+          volumes:
+          - name: minio-vol
+            persistentVolumeClaim:
+              claimName: minio-pvc
 
   - apiVersion: apps/v1
     kind: Deployment
@@ -465,6 +607,25 @@ objects:
                   mountPath: /mnt/${APP_NAME}-pvc
                 - name: mlflow-ui-startup-vol
                   mountPath: "/startup"
+              env:
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: mlflow-s3-credentials
+                      key: AWS_ACCESS_KEY_ID
+                      optional: true
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: mlflow-s3-credentials
+                      key: AWS_SECRET_ACCESS_KEY
+                      optional: true
+                - name: MLFLOW_S3_ENDPOINT_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: mlflow-s3-credentials
+                      key: S3_ENDPOINT_URL
+                      optional: true
               envFrom:
                 - configMapRef:
                     name: mlflow-cfg
@@ -507,11 +668,29 @@ parameters:
   name: PASSWORD
   required: true
 
-- description: Persistent Storage Size
+- description: Persistent application storage size
   displayName: Storage Size
   name: STORAGE_SIZE
   required: true
-  value: '1Gi'
+  value: 1Gi
+
+- description: Size of the backend storage persistent volume storage
+  displayName: Backend storage size
+  name: DB_PVC_SIZE
+  required: true
+  value: 1Gi
+
+- description: Object storage persistent volume size
+  displayName: Object storage size
+  name: MINIO_PVC_SIZE
+  required: true
+  value: 1Gi
+
+- description: By default, application is accessible from anywhere. To restrict access, add your workstation IP or network range to whitelist.
+  displayName: Route whitelist
+  name: ROUTEWHITELIST
+  required: false
+  value:
 
 - description: Docker Image for the MLflow
   displayName: MLflow image
@@ -519,11 +698,19 @@ parameters:
   required: true
   value: docker-registry.rahti.csc.fi/mlflow-images/mlflow:latest
 
-- description: PostgreSQL For Artifact Store host
-  displayName: PostgreSQL hostname
-  name: POSTGRESQL_HOST
-  value: postgresql
+- description: Access key for Artifact store
+  displayName: Artifact store access key
+  name: AWS_ACCESS_KEY_ID
   required: true
+  from: '[A-Z0-9]{15}'
+  generate: expression
+
+- description: Secret Access key for Artifact store
+  displayName: Artifact store secret access key
+  name: AWS_SECRET_ACCESS_KEY
+  required: true
+  from: '[A-Z0-9]{15}'
+  generate: expression
 
 - description: Username for PostgreSQL user that will be used for accessing the database
   displayName: PostgreSQL connection username
@@ -539,19 +726,9 @@ parameters:
   name: POSTGRESQL_PASSWORD
   required: true
 
-- description: Attached PERSISTENT volume claim name for storing metadata in PostgreSQL database
-  displayName: PERSISTENT volume claim name (database)
-  name: DB_PVC
-  value: postgre-db-pvc
-
-- description: Size of the artifact storage volume storage
-  displayName: Metadata volume storage size
-  name: DB_PVC_SIZE
-  value: "10Gi"
-
 - description: Database name for PostgreSQL database
   displayName: PostgreSQL connection database
-  from: 'airflow[A-Z0-9]{5}'
+  from: '[A-Z0-9]{5}'
   generate: expression
   name: POSTGRESQL_DATABASE
   required: true
@@ -560,9 +737,3 @@ parameters:
   displayName: Application Hostname Suffix
   name: APPLICATION_DOMAIN_SUFFIX
   value: rahtiapp.fi
-
-- description: By default, application is accessible from anywhere. To restrict access, add your workstation IP or network range to whitelist.
-  displayName: Route whitelist
-  name: ROUTEWHITELIST
-  required: false
-  value:
