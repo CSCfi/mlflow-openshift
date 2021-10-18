@@ -81,6 +81,11 @@ More detailed usage instructions will be published later.
 ---
 
 ## Version history
+**Version 0.7.1 - x.x.2021
+Lowering the learning curve**
+- Added user_guide.md with instructions for Allas
+- 
+
 **Version 0.7.0 - 12.10.2021
 Utilizing PostgreSQL and Minio**
 - Included S3 credentials as secret and mounted for pods
