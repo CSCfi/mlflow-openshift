@@ -81,10 +81,13 @@ More detailed usage instructions will be published later.
 ---
 
 ## Version history
-**Version 0.7.1 - x.x.2021
+**Version 0.8.0 - 22.10.2021
 Lowering the learning curve**
-- Added user_guide.md with instructions for Allas
-- 
+- Added mlflow-secret.yaml for CSC Allas configuration
+- Added user_guide.md with instructions for Models and CSC Allas
+- Renamed tracking example
+- Added inference example 
+- Added README.md for examples
 
 **Version 0.7.0 - 12.10.2021
 Utilizing PostgreSQL and Minio**
