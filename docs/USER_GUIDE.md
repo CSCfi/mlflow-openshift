@@ -1,5 +1,11 @@
 # MLflow user guide
 
+## Contents
+
+[Setting up Models](./USER_GUIDE.md#mlflow-models)
+
+[Using Allas](./USER_GUIDE.md#using-csc-allas-as-artifact-store)
+
 ## MLflow Models
 MLflow Models is used to serve tracked model for inference. In the template, Models is run in own pod, so inference doesn't affect Tracking performance. 
 Currently, template support serving one model at time.
@@ -34,13 +40,12 @@ Follow instructions to install `oc`, configure and connect it.
 
 Download [mlflow-secret.yaml](https://github.com/CSCfi/mlflow-openshift/blob/master/mlflow-secret.yaml) file, save it locally and modify following lines:
 ```bash
-  S3_ENDPOINT_URL: https://a3s.fi
   AWS_ACCESS_KEY_ID: your_access_key
   AWS_SECRET_ACCESS_KEY: your_secret_key
 ```
 Save and use `oc` to modify existing secret in your Rahti MLflow namespace by commanding:
 `oc apply -f ./mlflow-secret.yaml`
 
-After that `DEFAULT_ARTIFACT_ROOT` variable in `Resources -> Config Maps -> mlflow-cfg` should be se to `s3://your_bucket_name`
+After that, edit `Resources -> Config Maps -> mlflow-cfg` and change `DEFAULT_ARTIFACT_ROOT` variable to `s3://your_bucket_name` and `MLFLOW_S3_ENDPOINT_URL`to `https://a3s.fi`
 
 Restart mlflow-ui pod by scaling it first to zero, then back to one. Now when you create new experiment, default artifact store is your bucket in Allas.

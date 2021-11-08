@@ -87,7 +87,6 @@ objects:
       name: mlflow-s3-credentials
     type: Opaque
     stringData:
-      S3_ENDPOINT_URL: https://${APP_NAME}-minio.${APPLICATION_DOMAIN_SUFFIX}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
 
@@ -113,6 +112,7 @@ objects:
     data:
       LOCAL_STORAGE_PATH: postgresql+psycopg2://${POSTGRESQL_USER}:${POSTGRESQL_PASSWORD}@postgresql:5432/${POSTGRESQL_DATABASE}
       DEFAULT_ARTIFACT_ROOT: s3://default
+      MLFLOW_S3_ENDPOINT_URL: https://${APP_NAME}-minio.${APPLICATION_DOMAIN_SUFFIX}
 
   - apiVersion: v1
     kind: ConfigMap
@@ -315,6 +315,8 @@ objects:
           name: mlflow-models
       strategy:
         type: RollingUpdate
+        triggers:
+          - type: ConfigChange
       template:
         metadata:
           labels:
@@ -347,23 +349,20 @@ objects:
                     secretKeyRef:
                       name: mlflow-s3-credentials
                       key: AWS_ACCESS_KEY_ID
-                      optional: true
+                      optional: false
                 - name: AWS_SECRET_ACCESS_KEY
                   valueFrom:
                     secretKeyRef:
                       name: mlflow-s3-credentials
                       key: AWS_SECRET_ACCESS_KEY
-                      optional: true
-                - name: MLFLOW_S3_ENDPOINT_URL
-                  valueFrom:
-                    secretKeyRef:
-                      name: mlflow-s3-credentials
-                      key: S3_ENDPOINT_URL
-                      optional: true
+                      optional: false
               envFrom:
                 - configMapRef:
                     name: models-cfg
                     optional: true
+                - configMapRef:
+                    name: mlflow-cfg
+                    key: MLFLOW_S3_ENDPOINT_URL
           volumes:
             - name: mlflow-models-startup-vol
               configMap:
@@ -613,23 +612,20 @@ objects:
                     secretKeyRef:
                       name: mlflow-s3-credentials
                       key: AWS_ACCESS_KEY_ID
-                      optional: true
+                      optional: false
                 - name: AWS_SECRET_ACCESS_KEY
                   valueFrom:
                     secretKeyRef:
                       name: mlflow-s3-credentials
                       key: AWS_SECRET_ACCESS_KEY
-                      optional: true
-                - name: MLFLOW_S3_ENDPOINT_URL
-                  valueFrom:
-                    secretKeyRef:
-                      name: mlflow-s3-credentials
-                      key: S3_ENDPOINT_URL
-                      optional: true
+                      optional: false
               envFrom:
                 - configMapRef:
                     name: mlflow-cfg
                     key: LOCAL_STORAGE_PATH
+                - configMapRef:
+                    name: mlflow-cfg
+                    key: MLFLOW_S3_ENDPOINT_URL
           volumes:
             - name: mlflow-nginx-config-vol
               configMap:

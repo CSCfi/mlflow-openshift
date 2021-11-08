@@ -13,7 +13,7 @@ Following services (pods) will be created:
 
 Artifact storage:
 - Minio object storage in path `s3://default` is created to work as Default artifact store. This is good for testing and small scale usage.
-- Since artifacts can be quite large files, it might be necessary to change `DEFAULT_ARTIFACT_ROOT` to point some external storage system. CSC Allas or some other external S3 compatible object storage should be set up for artifact store to make them available to Tracking server.  [Instructions in User Guide](./docs/USER_GUIDE.md)
+- Since artifacts can be quite large files, it might be necessary to change `DEFAULT_ARTIFACT_ROOT` to point some external storage system. CSC Allas or some other external S3 compatible object storage should be set up for artifact store to make them available to Tracking server.  [Instructions in User Guide](./docs/USER_GUIDE.md#using-csc-allas-as-artifact-store)
 
 To utilize artifact store, you have to add generated keys to your programming environment. Keys are shown on summary page when deploying template.
 After deployment, keys can be found from Rahti web console `Resources -> Secrets` view. Example below in **Variables for programming environment** -section.
@@ -23,7 +23,7 @@ in OpenShift template and add your static ip or your organization ip range.
 
 MLflow Models is deployed but not started. Starting up Models serving pod needs access to model stored in Artifact store.
 You can start Models after setting up
-`MODELS_URI` in `models-cfg` config map by increasing pod count to 1 after you have saved your model to MLflow model registry. [Instructions in User Guide](./docs/USER_GUIDE.md)
+`MODELS_URI` in `models-cfg` config map by increasing pod count to 1 after you have saved your model to MLflow model registry. [Instructions in User Guide](./docs/USER_GUIDE.md#mlflow-models)
 
 ### Variables for programming environment ###
 Please note that MLflow itself is not programming environment. You can develop your machine learning code in your own environment 
@@ -83,22 +83,29 @@ More detailed usage instructions in [User Guide](./docs/USER_GUIDE.md).
 ---
 
 ## Version history
-**Version 0.8.1 - 26.10.2021
-Improving the documentation**
+**Version 0.9.0** - 8.11.2021  
+**Up to 1.21**
+- Upgradede MLflow from 1.20.2 -> 1.21.0
+- Added ConfigChange trigger to models pod
+- Changed MLFLOW_S3_ENDPOINT_URL from S3 secret to mlflow-cfg for ease change
+- Improvements to README's and USER_GUIDE
+
+**Version 0.8.1** - 26.10.2021  
+**Improving the documentation**
 - Links and minor additions and fixes to README.md
 - File hierarchy clarified
 - Links and improvements to example files and USER_GUIDE.md
 
-**Version 0.8.0 - 22.10.2021
-Lowering the learning curve**
+**Version 0.8.0** - 22.10.2021  
+**Lowering the learning curve**
 - Added mlflow-secret.yaml for CSC Allas configuration
 - Added user_guide.md with instructions for Models and CSC Allas
 - Renamed tracking example
 - Added inference example 
 - Added README.md for examples
 
-**Version 0.7.0 - 12.10.2021
-Utilizing PostgreSQL and Minio**
+**Version 0.7.0** - 12.10.2021  
+**Utilizing PostgreSQL and Minio**
 - Included S3 credentials as secret and mounted for pods
 - Added Minio and configured as default artifact store
 - Defaulted PostgreSQL as backend store
@@ -109,8 +116,8 @@ Utilizing PostgreSQL and Minio**
 - Improved documentation
 - Added simple example notebook to demonstrate tracking metrics
 
-**Version 0.6.0 - 24.9.2021
-Distribute metrics to PostgreSQL**
+**Version 0.6.0** - 24.9.2021  
+**Distribute metrics to PostgreSQL**
 - Added postgres and psycopg2 libraries to Dockerfile
 - Added PostgreSQL pod deployment to template - no startup
 - Added secrets, pvc and service for postgresql
@@ -119,41 +126,41 @@ Distribute metrics to PostgreSQL**
 - Default backend-store still pvc-filesystem
 - Default artifact store set to ./mlruns and note to instructions
 
-**Version 0.5.1 - 20.9.2021
-Update a bit**
+**Version 0.5.1** - 20.9.2021  
+**Update a bit**
 - Updated MLflow from 1.13.1 -> 1.20.2
 - Python image source back to DockerHub
 
-**Version 0.5.0 - 18.1.2021
-Let's get back to basics**
+**Version 0.5.0** - 18.1.2021  
+**Let's get back to basics**
 - Removed Helm chart from master
 - Removed Allas configuration and instructions from master to make it simpler to setup 
 - Created new 'dev' branch for advanced features
 
-**Version 0.4.0 - 27.11.2020
-Towards public template**
+**Version 0.4.0** - 27.11.2020  
+**Towards public template**
 - Upgraded MLflow to 1.12.0 version
 - Changed configuration to read S3 credentials from Secret to env var 
 - alpine-htpasswd image source from DockerHub to Rahti Image registry
 - README improvements
 - Changed template structure
 
-**Version 0.3.0 - 13.11.2020  
-From tracking only to serving models:**
+**Version 0.3.0** - 13.11.2020  
+**From tracking only to serving models:**
 - Added Models serving to both Helm chart and template
 
 Known issue: S3 credentials still set in deployment env vars instead of secret
 
-**Version 0.2.0 - 11.11.2020  
-Towards multi-purpose receipt:**
+**Version 0.2.0** - 11.11.2020  
+**Towards multi-purpose receipt:**
 - Upgraded MLflow to 1.11.0 version
 - Public image from Rahti Registry set as default
 - Added OpenShift template for Rahti
 - Changes made to prepare for separating Tracking Server and Models to different pods
 - Minor fixes and cleanings
 
-**Version 0.1.0 - 9.3.2020  
-Towards Public networks:**
+**Version 0.1.0** - 9.3.2020  
+**Towards Public networks:**
 - Added support for IP-whitelisting
 - Added simple NGINX-proxy authentication
 

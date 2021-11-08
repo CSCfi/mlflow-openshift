@@ -15,7 +15,7 @@ RUN pip install postgres
 RUN pip install --no-binary :all: psycopg2
 
 ## Install MLflow
-RUN pip install mlflow==1.20.2
+RUN pip install mlflow==1.21.0
 
 ## Start it up
 CMD mlflow
