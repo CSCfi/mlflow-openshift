@@ -1,5 +1,10 @@
 ## Using examples
 
+These examples are should to be used with Python 3.7 as it is the version used when building MLflwow image to Rahti image repository.
+If you encounter any errors, please check your Python version first.
+
+---
+
 ### MLflow Wine - tracking example
 **Simple example to test tracking metrics to Tracking server**
 
@@ -32,8 +37,8 @@ You can run notebook multiple time with different "alpha" values and compare res
 ### MLflow Wine - model inference example
 **Simple example to utilize machine learning model served with MLflow Models**
 
-This example assumes you have run **MLflow Wine - tracking example** at least once, so you do have model tracked.
-**AND you have followed User Guide to serve model with MLflow Models.**
+This example assumes you have run [**MLflow Wine - tracking example**](./01_MLflow-Wine-tracking-example.ipynb) at least once, so you do have model tracked.
+**AND you have followed [User Guide *MLflow Models*](../docs/USER_GUIDE.md#mlflow-models) to serve model with MLflow Models.**
 
 To run `02_MLflow-Wine-inference-example.ipynb` you need to have jupyter notebook / lab instance on your own computer, or in cloud (like cPouta).
 

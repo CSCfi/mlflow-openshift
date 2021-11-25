@@ -1,88 +1,34 @@
 # MLflow deployment for OpenShift container cloud #
 
-This repository contains OpenShift Template of [MLflow](https://mlflow.org) - machine learning lifecycle management tool. Template is available in CSC Rahti template registry.
+This repository contains [MLflow](https://mlflow.org) - machine learning lifecycle management tool template and instructions how to install and utilize it.
+MLflow template is installed into CSC Rahti cointainer cloud and can be found from Rahti template registry at [https://rahti.csc.fi](https://rahti.csc.fi).
+If you are unfamiliar with Rahti and how to get access, first check [Rahti's documentation](https://docs.csc.fi/cloud/rahti/)
 
+MLflow is open source tool to manage machine learning lifecycle. That means it can be used to track, store and compare all 
+training code, data, config, and results with [MLflow Tracking Server](https://mlflow.org/docs/latest/tracking.html). 
+Projects can be packaged with [MLflow Projects](https://mlflow.org/docs/latest/projects.html) to reproducible 
+format for sharing between environments. 
+MLflow can store, and manage models in a central [Model Registry](https://mlflow.org/docs/latest/model-registry.html) and models can be deployed for 
+diverse serving environments with [MLflow Models](https://mlflow.org/docs/latest/models.html).   
 
-Following services (pods) will be created:  
-- **MLflow Tracking Server** records data and metrics to track and compare performance of machine learning training experiments.  
-- **MLflow Models** is used to serve machine learning model for inference.   
-- **PostgreSQL** database to store all metrics and metadata from your training runs.  
-- **Minio** object storage to work as easy to approach artifact store. CSC Allas is preferred for heavier use.
+## Contents
+[Installation instructions](./docs/USER_GUIDE.md#installation-instructions)
 
-## Things to note ##
+[Setting up Models](./docs/USER_GUIDE.md#mlflow-models)
 
-Artifact storage:
-- Minio object storage in path `s3://default` is created to work as Default artifact store. This is good for testing and small scale usage.
-- Since artifacts can be quite large files, it might be necessary to change `DEFAULT_ARTIFACT_ROOT` to point some external storage system. CSC Allas or some other external S3 compatible object storage should be set up for artifact store to make them available to Tracking server.  [Instructions in User Guide](./docs/USER_GUIDE.md#using-csc-allas-as-artifact-store)
+[Using CSC Allas as artifact store](./docs/USER_GUIDE.md#using-csc-allas-as-artifact-store)
 
-To utilize artifact store, you have to add generated keys to your programming environment. Keys are shown on summary page when deploying template.
-After deployment, keys can be found from Rahti web console `Resources -> Secrets` view. Example below in **Variables for programming environment** -section.
+[Examples as Jupyter notebook](./examples/README.md)
 
-With default settings services are accessible from everywhere. To restrict access modify Whitelist variable
-in OpenShift template and add your static ip or your organization ip range.  
-
-MLflow Models is deployed but not started. Starting up Models serving pod needs access to model stored in Artifact store.
-You can start Models after setting up
-`MODELS_URI` in `models-cfg` config map by increasing pod count to 1 after you have saved your model to MLflow model registry. [Instructions in User Guide](./docs/USER_GUIDE.md#mlflow-models)
-
-### Variables for programming environment ###
-Please note that MLflow itself is not programming environment. You can develop your machine learning code in your own environment 
-in your own machine or in CSC cloud or supercomputer services.
-You should set up environment variables in your programming environment to access this MLflow Tracking server!
-Tracking server uri is the address of your deployed tracking server (for example: https://<YOUR_APP_NAME>.rahtiapp.fi)
-```bash
-export MLFLOW_TRACKING_URI=https://<YOUR_APP_NAME>.rahtiapp.fi
-export MLFLOW_TRACKING_USERNAME=your_username
-export MLFLOW_TRACKING_PASSWORD=your_password
-
-export MLFLOW_S3_ENDPOINT_URL=https://<YOUR_APP_NAME>-minio.rahtiapp.fi
-export AWS_ACCESS_KEY_ID=your_generated_access_key
-export AWS_SECRET_ACCESS_KEY=your_generated_secret_key 
-```
-OR with Conda based environment
-```bash
-conda env config vars set MLFLOW_TRACKING_URI=https://<YOUR_APP_NAME>.rahtiapp.fi
-conda env config vars set MLFLOW_TRACKING_USERNAME=your_username
-conda env config vars set MLFLOW_TRACKING_PASSWORD=your_password
-
-conda env config vars set MLFLOW_S3_ENDPOINT_URL=https://<YOUR_APP_NAME>-minio.rahtiapp.fi
-conda env config vars set AWS_ACCESS_KEY_ID=your_generated_access_key
-conda env config vars set AWS_SECRET_ACCESS_KEY=your_generated_secret_key 
-```
-
-## Installation instructions ##
-
-When deploying MLflow template at Rahti, you have to define some variables first:
-
-- App Name: You can define unique name for your MLflow instance. Name will be part of app public address.
-- Username: Your self defined username for tracking server.
-- Password: Your self defined password for tracking server.
-- Storage Size: Storage size for MLflow persistent storage. Default should be enough.
-- Backend storage size: Storage size for tracked metrics. Default should be enough.
-- Object storage size: Storage size for tracked artifacts.
-- Route whitelist: Add your static ip or ip range if you want to restrict access to your service.
-
-For rest of the variables default is fine for most users.
-- MLflow image: Latest tested image for Rahti as default value.
-- Artifact store access key: Generated by template.
-- Artifact store secret access key: Generated by template.
-- PostgreSQL connection username: Generated by template.
-- PostgreSQL connection password: Generated by template.
-- PostgreSQL connection database: Generated by template.
-- Application Hostname Suffix: Default is for Rahti.
-
-After setting up all variables, click Create to start deployment. Summary window shows addresses for Tracking server and Models server.
-Also generated keys for artifact store are shown here. Tracking server address, your credentials and artifact store keys should be added to your
-machine learning development environment to send metrics and artifacts to MLflow.
-
-**Congratulations!** After deployment is complete, you are ready to start using MLflow to track your machine learning training runs, compare models and to deploy best ones to inference.
-There are simple test notebooks for tracking and inference in `examples` directory.
-
-More detailed usage instructions in [User Guide](./docs/USER_GUIDE.md). 
+[Version history](./README.md#version-history)
 
 ---
 
 ## Version history
+**Version 0.9.1** - xx.11.2021
+**Usability improvements**
+- Redesigned the documentation
+
 **Version 0.9.0** - 8.11.2021  
 **Up to 1.21**
 - Upgradede MLflow from 1.20.2 -> 1.21.0
