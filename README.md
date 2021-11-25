@@ -25,7 +25,7 @@ diverse serving environments with [MLflow Models](https://mlflow.org/docs/latest
 ---
 
 ## Version history
-**Version 0.9.1** - xx.11.2021
+**Version 0.9.1** - 25.11.2021
 **Usability improvements**
 - Redesigned the documentation
 
