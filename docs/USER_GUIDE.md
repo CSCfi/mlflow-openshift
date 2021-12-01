@@ -10,6 +10,9 @@
 ---
 ## Installation instructions ##
 
+There is also video guide available in video.csc.fi -service:
+- [VIDEO: MLflow - How to setup and start using in Rahti](https://video.csc.fi/media/t/0_2frjyzz9)
+
 If you are unfamiliar with Rahti and how to get started, first check [Rahti's documentation](https://docs.csc.fi/cloud/rahti/)
 
 Create new project by clicking *Create Project* and fill your project name and csc_project code
@@ -56,10 +59,10 @@ Currently, template support serving one model at time.
 ### How to set up
 First you have to have some training runs recorded to Tracking server with model as a artifact. Model have to be stored to default artifact store in MinIO, or in CSC Allas.
 
-Open your experiment and your chosen run. Under artifacts there is model directory. When clicking that, Full Path of model uri can be copied. 
+Open your experiment and your chosen run in your MLflow Tracking server. Under artifacts there is model directory. When clicking that, Full Path of model uri can be copied. 
 ![Model URI path](pics/model_uri.jpg)
 
-Add copied uri to `MODELS_URI` variable in `models-cfg` config map and save.
+Switch into Rahti and add copied uri to `MODELS_URI` variable in `models-cfg` in config map save.
 
 ![Model CFG location](pics/models_cfg.jpg)
 
@@ -67,7 +70,7 @@ Increase `mlflow-models` pod count to 1.
 
 ![Increase pod](pics/increase_pod.jpg)
 
-Model can now be queried with http request. Copy your models pod address from Rahti and open example notebook.   from examples directory.
+Model can now be queried with http request. Copy your models pod address from Rahti and paste it to example notebook [**MLflow Wine - inference example**](../examples/02_MLflow-Wine-inference-example.ipynb).
 ![Copy your model url](pics/copy_url.jpg)
 
 ---

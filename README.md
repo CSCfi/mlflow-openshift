@@ -11,20 +11,29 @@ format for sharing between environments.
 MLflow can store, and manage models in a central [Model Registry](https://mlflow.org/docs/latest/model-registry.html) and models can be deployed for 
 diverse serving environments with [MLflow Models](https://mlflow.org/docs/latest/models.html).   
 
+[VIDEO: MLflow - How to setup and start using in Rahti](https://video.csc.fi/media/t/0_2frjyzz9)
+
+---
+
 ## Contents
-[Installation instructions](./docs/USER_GUIDE.md#installation-instructions)
+- [Installation instructions](./docs/USER_GUIDE.md#installation-instructions)
 
-[Setting up Models](./docs/USER_GUIDE.md#mlflow-models)
+- [Setting up Models](./docs/USER_GUIDE.md#mlflow-models)
 
-[Using CSC Allas as artifact store](./docs/USER_GUIDE.md#using-csc-allas-as-artifact-store)
+- [Using CSC Allas as artifact store](./docs/USER_GUIDE.md#using-csc-allas-as-artifact-store)
 
-[Examples as Jupyter notebook](./examples/README.md)
+- [Examples as Jupyter notebook](./examples/README.md)
 
-[Version history](./README.md#version-history)
+- [Version history](./README.md#version-history)
 
 ---
 
 ## Version history
+**Version 0.9.2** 1.12.2021
+**Expanding instruction horizon**
+- Fixes to documentation
+- Including link to first video tutorial
+
 **Version 0.9.1** - 25.11.2021
 **Usability improvements**
 - Redesigned the documentation
