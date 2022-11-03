@@ -9,10 +9,10 @@ RUN pip install h5py
 RUN pip install boto3
 RUN pip install scikit-learn
 RUN pip install tensorflow==2.0.0
-## RUN pip install pyspark
-## RUN pip install mysqlclient
-## RUN pip install postgres
-## RUN pip install --no-binary :all: psycopg2
+RUN pip install pyspark
+RUN pip install mysqlclient
+RUN pip install postgres
+RUN pip install --no-binary :all: psycopg2
 
 ## Install MLflow
 RUN pip install mlflow==1.30.0
