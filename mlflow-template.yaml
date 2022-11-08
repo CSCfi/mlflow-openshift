@@ -9,17 +9,13 @@ message: |-
   - MLflow Models service
   - PostgreSQL pod for backend database
   - MinIO S3 compatible private object storage for default artifact store
-
   Go to project overview page and once the creation of all the components are finished, use the following links -
   To access UI: https://${APP_NAME}.${APPLICATION_DOMAIN_SUFFIX}
   URL for model serving: https://${APP_NAME}-models.${APPLICATION_DOMAIN_SUFFIX}
   Artifact store: https://${APP_NAME}-minio.${APPLICATION_DOMAIN_SUFFIX}
-
   Artifact store key: ${AWS_ACCESS_KEY_ID}
   Artifact store secret key: ${AWS_SECRET_ACCESS_KEY}
-
   Installation instructions and user guide can be found from https://github.com/CSCfi/mlflow-openshift
-
 metadata:
   annotations:
     description: Deploys MLflow Lifecycle management service.
@@ -43,7 +39,7 @@ objects:
       name: ${APP_NAME}-pvc
     spec:
       accessModes:
-        - "ReadWriteMany"
+        - "ReadWriteOnce"
       resources:
         requests:
           storage: ${STORAGE_SIZE}
@@ -64,9 +60,8 @@ objects:
     metadata:
       name: minio-pvc
     spec:
-      storageClassName: glusterfs-storage
       accessModes:
-        - "ReadWriteMany"
+        - "ReadWriteOnce"
       resources:
         requests:
           storage: ${MINIO_PVC_SIZE}
@@ -80,7 +75,6 @@ objects:
       secret.env: |-
         USER=${USERNAME}
         PASS=${PASSWORD}
-
   - apiVersion: v1
     kind: Secret
     metadata:
@@ -129,7 +123,6 @@ objects:
             # start MLflow without artifact store path set
             mlflow server --backend-store-uri=$LOCAL_STORAGE_PATH --host=0.0.0.0
         fi
-
   - apiVersion: v1
     kind: ConfigMap
     metadata:
@@ -153,7 +146,6 @@ objects:
                 auth_basic_user_file /etc/nginx/secrets/passwd;
             }
         }
-
   - apiVersion: v1
     kind: ConfigMap
     metadata:
@@ -174,7 +166,6 @@ objects:
         else
             echo "Model URI not specified to config map. Cannot startup serving."
         fi
-
   - apiVersion: v1
     kind: Service
     metadata:
@@ -335,7 +326,7 @@ objects:
                   memory: 200Mi
                 limits:
                   cpu: 1600m
-                  memory: 4Gi
+                  memory: 1Gi
               ports:
                 - containerPort: 5001
               volumeMounts:
@@ -438,7 +429,7 @@ objects:
               timeoutSeconds: 1
             resources:
               limits:
-                memory: 2Gi
+                memory: 1Gi
             securityContext:
               capabilities: {}
               privileged: false
@@ -491,7 +482,7 @@ objects:
                 memory: 512Mi
               requests:
                 cpu: 200m
-                memory: 2Gi
+                memory: 256Mi
             readinessProbe:
               httpGet:
                 path: /minio/health/ready
@@ -552,7 +543,7 @@ objects:
                   memory: 128Mi
                 limits:
                   cpu: 300m
-                  memory: 2Gi
+                  memory: 512Mi
               volumeMounts:
                 - name: mlflow-htpasswd-vol
                   mountPath: "/tmp/secret-file"
@@ -568,7 +559,7 @@ objects:
                   memory: 128Mi
                 limits:
                   cpu: 300m
-                  memory: 2Gi
+                  memory: 512Mi
               ports:
                 - containerPort: 8080
               volumeMounts:
@@ -732,4 +723,4 @@ parameters:
 - description: The exposed hostname suffix that will be used to create routes for Tracking Server UI and Models API
   displayName: Application Hostname Suffix
   name: APPLICATION_DOMAIN_SUFFIX
-  value: rahtiapp.fi
+  value: 2.rahtiapp.fi
