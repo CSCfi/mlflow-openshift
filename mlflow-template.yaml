@@ -683,7 +683,7 @@ parameters:
   displayName: MLflow image
   name: MLFLOW_IMAGE
   required: true
-  value: docker-registry.rahti.csc.fi/mlflow-images/mlflow:latest
+  value: docker-registry.rahti.csc.fi/mlflow-images/mlflow:test
 
 - description: Access key for Artifact store
   displayName: Artifact store access key
