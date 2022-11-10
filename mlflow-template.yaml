@@ -325,7 +325,7 @@ objects:
                   cpu: 200m
                   memory: 200Mi
                 limits:
-                  cpu: 1600m
+                  cpu: 500m
                   memory: 1Gi
               ports:
                 - containerPort: 5001
