@@ -1,6 +1,6 @@
 FROM python:3.7.0
 
-LABEL maintainer="Juha Hulkkonen <juha.hulkkonen@csc.fi>"
+LABEL maintainer="Tuomas Ohtonen <tuomas.ohtonen@csc.fi>"
 
 RUN pip install --upgrade pip
 ## Install optional dependencies:
@@ -15,7 +15,7 @@ RUN pip install postgres
 RUN pip install --no-binary :all: psycopg2
 
 ## Install MLflow
-RUN pip install mlflow==1.21.0
+RUN pip install mlflow==1.30.0
 
 ## Start it up
 CMD mlflow

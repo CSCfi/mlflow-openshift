@@ -9,17 +9,13 @@ message: |-
   - MLflow Models service
   - PostgreSQL pod for backend database
   - MinIO S3 compatible private object storage for default artifact store
-
   Go to project overview page and once the creation of all the components are finished, use the following links -
   To access UI: https://${APP_NAME}.${APPLICATION_DOMAIN_SUFFIX}
   URL for model serving: https://${APP_NAME}-models.${APPLICATION_DOMAIN_SUFFIX}
   Artifact store: https://${APP_NAME}-minio.${APPLICATION_DOMAIN_SUFFIX}
-
   Artifact store key: ${AWS_ACCESS_KEY_ID}
   Artifact store secret key: ${AWS_SECRET_ACCESS_KEY}
-
   Installation instructions and user guide can be found from https://github.com/CSCfi/mlflow-openshift
-
 metadata:
   annotations:
     description: Deploys MLflow Lifecycle management service.
@@ -43,7 +39,7 @@ objects:
       name: ${APP_NAME}-pvc
     spec:
       accessModes:
-        - "ReadWriteMany"
+        - "ReadWriteOnce"
       resources:
         requests:
           storage: ${STORAGE_SIZE}
@@ -64,9 +60,8 @@ objects:
     metadata:
       name: minio-pvc
     spec:
-      storageClassName: glusterfs-storage
       accessModes:
-        - "ReadWriteMany"
+        - "ReadWriteOnce"
       resources:
         requests:
           storage: ${MINIO_PVC_SIZE}
@@ -80,7 +75,6 @@ objects:
       secret.env: |-
         USER=${USERNAME}
         PASS=${PASSWORD}
-
   - apiVersion: v1
     kind: Secret
     metadata:
@@ -129,7 +123,6 @@ objects:
             # start MLflow without artifact store path set
             mlflow server --backend-store-uri=$LOCAL_STORAGE_PATH --host=0.0.0.0
         fi
-
   - apiVersion: v1
     kind: ConfigMap
     metadata:
@@ -153,7 +146,6 @@ objects:
                 auth_basic_user_file /etc/nginx/secrets/passwd;
             }
         }
-
   - apiVersion: v1
     kind: ConfigMap
     metadata:
@@ -174,7 +166,6 @@ objects:
         else
             echo "Model URI not specified to config map. Cannot startup serving."
         fi
-
   - apiVersion: v1
     kind: Service
     metadata:
