@@ -29,6 +29,12 @@ diverse serving environments with [MLflow Models](https://mlflow.org/docs/latest
 ---
 
 ## Version history
+
+**Version 1.0.0** 14.11.2022
+**Towards new Rahti**
+- MLflow version updated to 1.30.0
+- Verified functioning with next Rahti release
+
 **Version 0.9.2** 1.12.2021
 **Expanding instruction horizon**
 - Fixes to documentation

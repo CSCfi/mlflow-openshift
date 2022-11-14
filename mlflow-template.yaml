@@ -325,7 +325,7 @@ objects:
                   cpu: 200m
                   memory: 200Mi
                 limits:
-                  cpu: 500m
+                  cpu: 1600m
                   memory: 1Gi
               ports:
                 - containerPort: 5001
@@ -683,7 +683,7 @@ parameters:
   displayName: MLflow image
   name: MLFLOW_IMAGE
   required: true
-  value: docker-registry.rahti.csc.fi/mlflow-images/mlflow:test
+  value: docker-registry.rahti.csc.fi/mlflow-images/mlflow:latest
 
 - description: Access key for Artifact store
   displayName: Artifact store access key
@@ -723,4 +723,4 @@ parameters:
 - description: The exposed hostname suffix that will be used to create routes for Tracking Server UI and Models API
   displayName: Application Hostname Suffix
   name: APPLICATION_DOMAIN_SUFFIX
-  value: 2.rahtiapp.fi
+  value: rahtiapp.fi
