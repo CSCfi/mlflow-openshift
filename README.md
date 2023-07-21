@@ -32,7 +32,7 @@ diverse serving environments with [MLflow Models](https://mlflow.org/docs/latest
 
 **Version 1.0.1** 21.7.2023
 **Preparing for the new era**
-- MLflow version updated to 2.50.0
+- MLflow version updated to 2.5.0
 - Added libraries and commented out version numbers so using latest at least for now
 
 **Version 1.0.0** 14.11.2022
