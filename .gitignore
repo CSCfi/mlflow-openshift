@@ -1,3 +1,5 @@
 .idea/ 
 helm_charts/mlflow/local_values/
 .DS_Store
+.ipynb_checkpoints/
+docs/.ipynb_checkpoints/
