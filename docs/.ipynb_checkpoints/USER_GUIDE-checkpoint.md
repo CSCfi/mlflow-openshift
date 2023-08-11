@@ -11,18 +11,22 @@
 There is also video guide available in video.csc.fi -service:
 - [VIDEO: MLflow - How to setup and start using in Rahti](https://video.csc.fi/media/t/0_2frjyzz9)
 
-If you are unfamiliar with Rahti and how to get started, first check [Rahti's documentation](https://docs.csc.fi/cloud/rahti/)
+If you are unfamiliar with Rahti and how to get started, first check [Rahti's documentation](https://docs.csc.fi/cloud/rahti/).
 
-Create new project by clicking *Create Project* and fill your project name and csc_project code
+Create new project by clicking *Create Project* and fill your project name and csc_project code.
+
 ![Create project](pics/create_project.png)
 
-After you've created the project, *Browse catalog*
+After you've created the project, *Browse catalog*.
+
 ![Browse catalog](pics/browse_catalog.jpg)
 
-Find MLflow, click to choose it and click Next to start configuring your application
+Find MLflow, click to choose it and click Next to start configuring your application.
+
 ![Configure app](pics/configure_app.jpg)
 
-Fill the configuration form. Explanation and recommendations after the picture below
+Fill the configuration form. Explanation and recommendations after the picture below.
+
 ![Fill the form](pics/fill_the_form.png)
 
 - App Name: You can define unique name for your MLflow instance. Name will be part of app public address.
@@ -91,8 +95,8 @@ To do that, you should have granted access to a project that has Allas- service 
 
 Create bucket for your mlflow-data via console tools or [Web UI](https://pouta.csc.fi).  See instructions [here](https://docs.csc.fi/data/Allas/using_allas/web_client/).
 
-You have to have [oc client](https://docs.csc.fi/cloud/rahti/usage/cli/) installed to you computer to modify secrets created by MLflow template.
-Follow instructions to install `oc`, configure and connect it. You can get the login command with token from you Rahti UI- click your name in the upper right corner, and click "Copy Login Command".
+You have to have oc client installed to you computer to modify secrets created by MLflow template.
+Follow [instructions](https://docs.csc.fi/cloud/rahti/usage/cli/) to install `oc`, configure and connect it. You can get the login command with token from you Rahti UI- click your name in the upper right corner, and click "Copy Login Command".
 
 There are multiple ways to connect with Allas, but here we use the S3 client. See installation guide and instructions [here](https://docs.csc.fi/data/Allas/using_allas/s3_client/).
 

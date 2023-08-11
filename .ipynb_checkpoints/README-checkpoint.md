@@ -2,7 +2,7 @@
 
 This repository contains [MLflow](https://mlflow.org) - machine learning lifecycle management tool template and instructions how to install and utilize it.
 MLflow template is installed into CSC Rahti cointainer cloud and can be found from Rahti template registry at [https://rahti.csc.fi](https://rahti.csc.fi).
-If you are unfamiliar with Rahti and how to get access, first check [Rahti's documentation](https://docs.csc.fi/cloud/rahti/)
+If you are unfamiliar with Rahti and how to get access, first check [Rahti's documentation](https://docs.csc.fi/cloud/rahti/).
 
 MLflow is open source tool to manage machine learning lifecycle. That means it can be used to track, store and compare all 
 training code, data, config, and results with [MLflow Tracking Server](https://mlflow.org/docs/latest/tracking.html). 
@@ -18,7 +18,7 @@ diverse serving environments with [MLflow Models](https://mlflow.org/docs/latest
 ## Contents
 - [Installation instructions](./docs/USER_GUIDE.md#installation-instructions)
 
-- [Setting up Models](./docs/USER_GUIDE.md#mlflow-models) *not used in tutorials for now*
+- [Setting up Models](./docs/USER_GUIDE.md#mlflow-models) *not utilized in tutorials for now*
 
 - [Using CSC Allas as artifact store](./docs/USER_GUIDE.md#using-csc-allas-as-artifact-store)
 
